@@ -1,6 +1,9 @@
 // Frames per secound
 const FPS=35; 
 const Slow = 0.9; // Ship slowes over time with no thrust
+const LASER_DIST = 0.2; // max range of shot(fraction of screen)
+const LASER_MAX = 10; // max beams shot
+const LASER_SPD = 500; // Shot speed
 const SHAPE_JAG = 0.4; // jag of shape (0=0, 1=tons)
 const Emoji_Num = 4; //start number of attackers(Emojies)
 const EMOJI_SIZE = 100; // start Emoji size PX
@@ -8,7 +11,9 @@ const EMOJI_SPD = 100; //max start spd PX
 const EMOJI_VERT= 10;//average number of vertices on each emoji
 const Thrust_Speed = 6; // acceleration of the ship in pixels per second per second
 const SHIP_SIZE = 30; // ship height px
+const SHIP_BLINK_DUR = 0.1;//Time of Blinks during restart
 const SHIP_BOOM_DUR = 0.3;//Time of Boom
+const SHIP_INV_TIME = 3;//Time after restart before death
 const SHIP_DEATH = false;//The collision detection
 const Turn_Speed = 400; // turn speed degrees(dps)
 
@@ -53,6 +58,9 @@ function shipBoom() {
 
 function keyDown(/** @type {KeyboardEvent} */ ev) {
             switch(ev.keyCode) {
+                case 32: // SB shoot laser
+                    shootLaser();
+                    break;
                 case 37: // LA rotate Left
                     ship.rot = Turn_Speed / 180 * Math.PI / FPS;
                     break;
@@ -67,6 +75,9 @@ function keyDown(/** @type {KeyboardEvent} */ ev) {
 
         function keyUp(/** @type {KeyboardEvent} */ ev) {
             switch(ev.keyCode) {
+                case 32: // SB shoot laser again
+                    ship.canShoot = true;
+                    break;
                 case 37: // LA stop rotate Left
                     ship.rot = 0;
                     break;
@@ -96,24 +107,46 @@ function keyDown(/** @type {KeyboardEvent} */ ev) {
             }
             return Emoji;
         };
-
+        //ship creation after boom/death.
         function newShip() {
+            
             return {
-            x: canv.width / 2,
-            y: canv.height / 2,
-            r: SHIP_SIZE / 2,
-            a: 90 / 180 * Math.PI, // convert to radians
-            boomTime: 0,
-            rot: 0,            
-            thrusting: false,            
-            thrust: {                
-                x: 0,
-                y: 0 
-                } 
+                x: canv.width / 2,
+                y: canv.height / 2,
+                r: SHIP_SIZE / 2,
+                a: 90 / 180 * Math.PI, // convert to radians
+                blinkNum: Math.ceil(SHIP_INV_TIME / SHIP_BLINK_DUR),
+                blinkTime: Math.ceil(SHIP_BLINK_DUR * FPS),
+                canShoot: true,
+                lasers: [],
+                boomTime: 0,
+                rot: 0,            
+                thrusting: false,            
+                thrust: {                
+                    x: 0,
+                    y: 0 
+                    } 
             }
         }
 
+        function shootLaser() {
+            // create laser object
+            if(ship.canShoot && ship.lasers.length < LASER_MAX) {
+                ship.lasers.push({//shoot from nose
+                    x: ship.x + 4 / 3 * ship.r * Math.cos(ship.a),
+                    y: ship.y - 4 / 3 * ship.r * Math.sin(ship.a),
+                    xv: LASER_SPD * Math.cos(ship.a) / FPS,
+                    yv: -LASER_SPD * Math.sin(ship.a) / FPS,
+                    dist: 0
+                })
+            }
+            // stop shooting
+            ship.canShoot = false;
+        }
+
 function update(){
+    var blinkOn = ship.blinkNum % 2 == 0;
+
     var boom = ship.boomTime > 0;
 
     //space
@@ -129,7 +162,7 @@ function update(){
         ship.thrust.y -= Thrust_Speed * Math.sin(ship.a) / FPS;
         
                         // draw the thruster
-                        if (!boom) {
+                        if (!boom && blinkOn) {
                         ctx.fillStyle = "#0ECBFF";
                         ctx.strokeStyle = "#C422D6";
                         ctx.lineWidth = SHIP_SIZE / 10;
@@ -158,24 +191,39 @@ function update(){
 
     //make ship
     if(!boom){
-        ctx.strokeStyle = "#05F70D";
-        ctx.lineWidth = SHIP_SIZE / 15;
-        ctx.beginPath();
-        ctx.moveTo( // nose of the ship
-           ship.x + 4 / 3 * ship.r * Math.cos(ship.a),
-           ship.y - 4 / 3 * ship.r * Math.sin(ship.a)
-           );
-           ctx.lineTo( // rear left
-           ship.x - ship.r * (2 / 3 * Math.cos(ship.a) + Math.sin(ship.a)),
-           ship.y + ship.r * (2 / 3 * Math.sin(ship.a) - Math.cos(ship.a))
-           );
-           ctx.lineTo( // rear right
-           ship.x - ship.r * (2 / 3 * Math.cos(ship.a) - Math.sin(ship.a)),
-           ship.y + ship.r * (2 / 3 * Math.sin(ship.a) + Math.cos(ship.a))
-       );
-    
-        ctx.closePath();
-        ctx.stroke();
+        if (blinkOn){
+            ctx.strokeStyle = "#05F70D";
+            ctx.lineWidth = SHIP_SIZE / 15;
+            ctx.beginPath();
+            ctx.moveTo( // nose of the ship
+            ship.x + 4 / 3 * ship.r * Math.cos(ship.a),
+            ship.y - 4 / 3 * ship.r * Math.sin(ship.a)
+            );
+            ctx.lineTo( // rear left
+            ship.x - ship.r * (2 / 3 * Math.cos(ship.a) + Math.sin(ship.a)),
+            ship.y + ship.r * (2 / 3 * Math.sin(ship.a) - Math.cos(ship.a))
+            );
+            ctx.lineTo( // rear right
+            ship.x - ship.r * (2 / 3 * Math.cos(ship.a) - Math.sin(ship.a)),
+            ship.y + ship.r * (2 / 3 * Math.sin(ship.a) + Math.cos(ship.a))
+        );
+        
+            ctx.closePath();
+            ctx.stroke();
+    }
+      // handle blinking
+      if (ship.blinkNum > 0) {
+
+        // reduce the blink time
+        ship.blinkTime--;
+
+        // reduce the blink num
+        if (ship.blinkTime == 0) {
+            ship.blinkTime = Math.ceil(SHIP_BLINK_DUR * FPS);
+            ship.blinkNum--;
+        }
+    }
+
     }else {
         //draw boom
     
@@ -254,13 +302,57 @@ function update(){
     
     }
 
-    //object hits ship
-    if (!boom){
-    for (var i = 0; i < Emoji.length; i++) {
-            if (distBetweenPoints(ship.x, ship.y, Emoji[i].x, Emoji[i].y) < ship.r + Emoji[i].r){
-                shipBoom();
+    // make Laser
+    for (var i = 0; i < ship.lasers.length; i++ ) {
+        ctx.fillStyle = "purple";
+        ctx.beginPath();
+        ctx.arc(ship.lasers[i].x, ship.lasers[i].y, SHIP_SIZE / 15, 0, Math.PI * 2, false);
+        ctx.fill();
+    }
+
+    // objects shot
+    var ex, ey, er, lx, ly;
+    for (var i = Emoji.length - 1; i >= 0; i--) {
+
+        // grab Emoji properties
+        ex = Emoji[i].x;
+        ey = Emoji[i].y;
+        er = Emoji[i].r;
+
+        // loop lasers
+        for (var j = ship.lasers.length - 1; j >= 0; j--) {
+
+            //laser properties
+            lx = ship.lasers[j].x;
+            ly = ship.lasers[j].y;
+            // detect hits
+            if (/*ship.lasers[j].explodeTime == 0 &&*/ distBetweenPoints(ex, ey, lx, ly) < er) {
+
+                // hit
+                if (distBetweenPoints(ex, ey, lx, ly) < er) {
+                    // laser removel
+                    ship.lasers.splice(j, 1);
+
+                    //emoji removel
+                    Emoji.splice(i, 1);
+                }
+               /* // destroy the asteroid and activate the laser explosion
+                destroyAsteroid(i);
+                ship.lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);*/
+                break;
             }
         }
+    }
+
+    //object hits ship
+    if (!boom){
+        if (ship.blinkNum == 0) {
+                for (var i = 0; i < Emoji.length; i++) {
+                    if (distBetweenPoints(ship.x, ship.y, Emoji[i].x, Emoji[i].y) < ship.r + Emoji[i].r){
+                       shipBoom();
+                   }
+                }
+            }
         //rotate ship
         ship.a += ship.rot
         //move ship
@@ -271,9 +363,9 @@ function update(){
 
         if (ship.boomTime == 0) {
             ship = newShip();
+         }
         }
-    }
-
+    
     //loop space(ship will apear on opposite side of side flown through)
     if (ship.x < 0 - ship.r) {
         ship.x = canv.width + ship.r;
@@ -285,6 +377,35 @@ function update(){
     }else if(ship.y> canv.height + ship.r ){
         ship.y =  0 - ship.r;
     }
+    // move laser
+    for (var i = ship.lasers.length - 1; i >= 0; i--) {
+        //check distance traveled
+        if (ship.lasers[i].dist > LASER_DIST * canv.width) {
+            ship.lasers.splice(i, 1);
+            continue;
+        }
+
+        // move the laser
+        ship.lasers[i].x += ship.lasers[i].xv;
+        ship.lasers[i].y += ship.lasers[i].yv;
+
+        // distance moved
+        ship.lasers[i].dist += Math.sqrt(Math.pow(ship.lasers[i].xv, 2) + Math.pow(ship.lasers[i].yv, 2));
+
+        // handle screen edge
+        if (ship.lasers[i].x < 0) {
+            ship.lasers[i].x = canv.width;
+        } else if (ship.lasers[i].x > canv.width){
+            ship.lasers[i].x = 0;
+        }
+        if (ship.lasers[i].y <0) {
+            ship.lasers[i].y = canv.height;
+        } else if (ship.lasers[i].y > canv.height){
+            ship.lasers[i].y = 0;
+        }
+
+        }
+   
 
      //mave emojis
      for (var i = 0; i < Emoji.length; i++){
@@ -308,5 +429,5 @@ function update(){
     //center
     ctx.fillStyle = "#F511AD";
     //ctx.fillRect(ship.x - 1, ship.y - 1, 2.5,2.5);
-}
 
+ }
