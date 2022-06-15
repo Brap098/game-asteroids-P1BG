@@ -1,5 +1,5 @@
-// Frames per secound
-const FPS=35; 
+
+const FPS=35; // Frames per secound
 const Slow = 0.9; // Ship slowes over time with no thrust
 const LASER_DIST = 0.2; // max range of shot(fraction of screen)
 const LASER_MAX = 10; // max beams shot
@@ -16,6 +16,7 @@ const SHIP_BOOM_DUR = 0.3;//Time of Boom
 const SHIP_INV_TIME = 3;//Time after restart before death
 const SHIP_DEATH = false;//The collision detection
 const Turn_Speed = 400; // turn speed degrees(dps)
+
 
 
 /** @type {HTMLCanvasElements} */
@@ -38,15 +39,21 @@ setInterval(update, 1000 / FPS);
 function createEmojiAttackers() {
     Emoji = [];
     var x, y;
-    for (var i = 0; i < Emoji_Num; i++){
+    for (var i = 0; i < Emoji_Num; i++){// number of objects
         do{
              x = Math.floor(Math.random() * canv.width);
              y = Math.floor(Math.random() * canv.height);
         } while (distBetweenPoints(ship.x, ship.y,x ,y) < EMOJI_SIZE * 2 + ship.r);
-        Emoji.push(newEmojis(x, y));
+        Emoji.push(newEmojis(x, y, Math.ceil(EMOJI_SIZE / 2)));
         
     };
 }
+function destroyEmoji(index) {
+    var x = Emoji[index].x;
+    var y = Emoji[index].y;
+    var r = Emoji[index].r;
+}
+
 function distBetweenPoints(x1, y1, x2, y2) {
     return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
@@ -90,13 +97,13 @@ function keyDown(/** @type {KeyboardEvent} */ ev) {
             }
         }
 
-        function newEmojis(x, y) {
+        function newEmojis(x, y, r) {
             var Emoji = {
                 x: x,
                 y: y,
                 xv:Math.random() * EMOJI_SPD / FPS * (Math.random() < 0.5 ? 1 : -1),
                 yv:Math.random() * EMOJI_SPD / FPS * (Math.random() < 0.5 ? 1 : -1),
-                r: EMOJI_SIZE / 2,
+                r: r,
                 a: Math.random() * Math.PI * 2, // in radians
                 vert: Math.floor(Math.random() * (EMOJI_VERT + 1) + EMOJI_VERT / 2),
                 offs: []
@@ -145,6 +152,9 @@ function keyDown(/** @type {KeyboardEvent} */ ev) {
         }
 
 function update(){
+
+   
+
     var blinkOn = ship.blinkNum % 2 == 0;
 
     var boom = ship.boomTime > 0;
@@ -258,11 +268,11 @@ function update(){
 
     //draw emojies
    
-    var x, y, r, a, vert, offs;
-    for (var i =  0; i < Emoji.length; i++){
-
+    
     ctx.strokeStyle = "yellow"
     ctx.lineWidth = SHIP_SIZE / 20;
+    var x, y, r, a, vert, offs;
+    for (var i =  0; i < Emoji.length; i++){
 
         //emoji properties
         x = Emoji[i].x;
@@ -278,9 +288,15 @@ function update(){
             x + r * offs[0] * Math.cos(a),
             y + r * offs[0] * Math.sin(a),
         );
+//image try
+         
+
+
 
         //draw shape(Change to Emoji)
         for (var j = 1; j < vert; j++){
+            var img = document.getElementById("8B");
+        ctx.drawImage(img, x - r, y - r, 70, 70);
             ctx.lineTo(
                 x + r * offs[j] * Math.cos(a + j * Math.PI * 2 / vert),
                 y + r * offs[j] * Math.sin(a + j * Math.PI * 2 / vert)
@@ -336,9 +352,9 @@ function update(){
                     //emoji removel
                     Emoji.splice(i, 1);
                 }
-               /* // destroy the asteroid and activate the laser explosion
-                destroyAsteroid(i);
-                ship.lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);*/
+                // destroy the asteroid and activate the laser explosion
+               destroyEmoji(i);
+                /* ship.lasers[j].explodeTime = Math.ceil(LASER_EXPLODE_DUR * FPS);*/
                 break;
             }
         }
