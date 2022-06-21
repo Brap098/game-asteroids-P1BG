@@ -5,7 +5,7 @@ const LASER_DIST = 0.2; // max range of shot(fraction of screen)
 const LASER_MAX = 10; // max beams shot
 const LASER_SPD = 500; // Shot speed
 const SHAPE_JAG = 0.4; // jag of shape (0=0, 1=tons)
-const Emoji_Num = 4; //start number of attackers(Emojies)
+const Emoji_Num = 2; //start number of attackers(Emojies)
 const EMOJI_SIZE = 100; // start Emoji size PX
 const EMOJI_SPD = 100; //max start spd PX
 const EMOJI_VERT= 10;//average number of vertices on each emoji
@@ -14,7 +14,8 @@ const SHIP_SIZE = 30; // ship height px
 const SHIP_BLINK_DUR = 0.1;//Time of Blinks during restart
 const SHIP_BOOM_DUR = 0.3;//Time of Boom
 const SHIP_INV_TIME = 3;//Time after restart before death
-const SHIP_DEATH = false;//The collision detection
+const SHIP_DEATH = true;//The collision detection circle
+const CENTER_DOT = false;//Center dots
 const Turn_Speed = 400; // turn speed degrees(dps)
 
 
@@ -48,12 +49,23 @@ function createEmojiAttackers() {
         
     };
 }
-function destroyEmoji(index) {
+/*function destroyEmoji(index) {
     var x = Emoji[index].x;
     var y = Emoji[index].y;
     var r = Emoji[index].r;
-}
 
+
+    // emoji split
+    if (r == Math.ceil(EMOJI_SIZE / 2)) {
+        Emoji.push(newEmojis(x, y, Math.ceil(EMOJI_SIZE / 4)));
+        Emoji.push(newEmojis(x, y, Math.ceil(EMOJI_SIZE / 4)));
+    } else if (r == Math.ceil(EMOJI_SIZE / 4)) {
+        Emoji.push(newEmojis(x, y, Math.ceil(EMOJI_SIZE / 8)));
+        Emoji.push(newEmojis(x, y, Math.ceil(EMOJI_SIZE / 8)));
+    }
+    // emoji destroyed
+    Emoji.splice(index, 1);
+}*/
 function distBetweenPoints(x1, y1, x2, y2) {
     return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
@@ -220,6 +232,12 @@ function update(){
         
             ctx.closePath();
             ctx.stroke();
+
+        //ship center dot
+        if (CENTER_DOT) {
+        ctx.fillStyle = "purple";
+        ctx.fillRect(ship.x - 1, ship.y - 1, 2, 2);
+    }
     }
       // handle blinking
       if (ship.blinkNum > 0) {
@@ -258,6 +276,7 @@ function update(){
         ctx.arc(ship.x, ship.y, ship.r * 0.5, 0, Math.PI * 2, false);
         ctx.fill();
     }
+    //ship collision boundery
     if (SHIP_DEATH){
         ctx.strokeStyle = "#F500B8";
         ctx.beginPath();
@@ -275,6 +294,7 @@ function update(){
     for (var i =  0; i < Emoji.length; i++){
 
         //emoji properties
+        
         x = Emoji[i].x;
         y = Emoji[i].y;
         r = Emoji[i].r;
@@ -291,36 +311,36 @@ function update(){
 //image try
          
 
-
-
         //draw shape(Change to Emoji)
-        for (var j = 1; j < vert; j++){
-            var img = document.getElementById("8B");
-        ctx.drawImage(img, x - r, y - r, 70, 70);
-            ctx.lineTo(
-                x + r * offs[j] * Math.cos(a + j * Math.PI * 2 / vert),
-                y + r * offs[j] * Math.sin(a + j * Math.PI * 2 / vert)
 
-            )
-        }
+        // lv 1 object
+        var img = document.getElementById("blazeit");
+        // lv 2 object
+        var img1 = document.getElementById("evil");
+
         ctx.closePath();
         ctx.stroke();
-
+        //astroid collision boundery
         if (SHIP_DEATH){
             ctx.strokeStyle = "#F500B8";
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2, false);
             ctx.stroke();
+            ctx.drawImage(img, x - r  , y - r, EMOJI_SIZE, EMOJI_SIZE);
     
+            //E center dot
+            if (CENTER_DOT){
+            ctx.fillStyle = "green";
+            ctx.fillRect(x - 1, y - 1, 15, 15);
+            }
+            
         }
 
-       
-    
     }
 
     // make Laser
     for (var i = 0; i < ship.lasers.length; i++ ) {
-        ctx.fillStyle = "purple";
+        ctx.fillStyle = "#0ECBFF";
         ctx.beginPath();
         ctx.arc(ship.lasers[i].x, ship.lasers[i].y, SHIP_SIZE / 15, 0, Math.PI * 2, false);
         ctx.fill();
@@ -366,6 +386,7 @@ function update(){
                 for (var i = 0; i < Emoji.length; i++) {
                     if (distBetweenPoints(ship.x, ship.y, Emoji[i].x, Emoji[i].y) < ship.r + Emoji[i].r){
                        shipBoom();
+                       destroyEmoji(i); 
                    }
                 }
             }
