@@ -1,11 +1,11 @@
 
 const FPS=35; // Frames per secound
 const Slow = 0.9; // Ship slowes over time with no thrust
-const LASER_DIST = 0.2; // max range of shot(fraction of screen)
+const LASER_DIST = 0.5; // max range of shot(fraction of screen)
 const LASER_MAX = 10; // max beams shot
-const LASER_SPD = 500; // Shot speed
+const LASER_SPD = 700; // Shot speed
 const SHAPE_JAG = 0.4; // jag of shape (0=0, 1=tons)
-const Emoji_Num = 2; //start number of attackers(Emojies)
+const Emoji_Num = 1; //start number of attackers(Emojies)
 const EMOJI_SIZE = 100; // start Emoji size PX
 const EMOJI_SPD = 100; //max start spd PX
 const EMOJI_VERT= 10;//average number of vertices on each emoji
@@ -17,12 +17,19 @@ const SHIP_INV_TIME = 3;//Time after restart before death
 const SHIP_DEATH = true;//The collision detection circle
 const CENTER_DOT = false;//Center dots
 const Turn_Speed = 400; // turn speed degrees(dps)
+const TEXT_FADE_TIME = 2.5 // text fade deration
+const TEXT_SIZE = 40; // text size in pixles
 
 
 
 /** @type {HTMLCanvasElements} */
 var canv = document.getElementById("gameBoarder");
 var ctx = canv.getContext("2d");
+
+// game perameter
+var level, emoji, ship, text, text2;
+newGame();
+
 // ship object
 var ship = newShip();
 
@@ -40,7 +47,7 @@ setInterval(update, 1000 / FPS);
 function createEmojiAttackers() {
     Emoji = [];
     var x, y;
-    for (var i = 0; i < Emoji_Num; i++){// number of objects
+    for (var i = 0; i < Emoji_Num + level * 2; i++){// number of objects
         do{
              x = Math.floor(Math.random() * canv.width);
              y = Math.floor(Math.random() * canv.height);
@@ -49,23 +56,6 @@ function createEmojiAttackers() {
         
     };
 }
-/*function destroyEmoji(index) {
-    var x = Emoji[index].x;
-    var y = Emoji[index].y;
-    var r = Emoji[index].r;
-
-
-    // emoji split
-    if (r == Math.ceil(EMOJI_SIZE / 2)) {
-        Emoji.push(newEmojis(x, y, Math.ceil(EMOJI_SIZE / 4)));
-        Emoji.push(newEmojis(x, y, Math.ceil(EMOJI_SIZE / 4)));
-    } else if (r == Math.ceil(EMOJI_SIZE / 4)) {
-        Emoji.push(newEmojis(x, y, Math.ceil(EMOJI_SIZE / 8)));
-        Emoji.push(newEmojis(x, y, Math.ceil(EMOJI_SIZE / 8)));
-    }
-    // emoji destroyed
-    Emoji.splice(index, 1);
-}*/
 function distBetweenPoints(x1, y1, x2, y2) {
     return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
@@ -110,11 +100,12 @@ function keyDown(/** @type {KeyboardEvent} */ ev) {
         }
 
         function newEmojis(x, y, r) {
+            var levelUp = 1 + 0.1 * level;
             var Emoji = {
                 x: x,
                 y: y,
-                xv:Math.random() * EMOJI_SPD / FPS * (Math.random() < 0.5 ? 1 : -1),
-                yv:Math.random() * EMOJI_SPD / FPS * (Math.random() < 0.5 ? 1 : -1),
+                xv:Math.random() * EMOJI_SPD * levelUp / FPS * (Math.random() < 0.5 ? 1 : -1),
+                yv:Math.random() * EMOJI_SPD * levelUp / FPS * (Math.random() < 0.5 ? 1 : -1),
                 r: r,
                 a: Math.random() * Math.PI * 2, // in radians
                 vert: Math.floor(Math.random() * (EMOJI_VERT + 1) + EMOJI_VERT / 2),
@@ -126,6 +117,17 @@ function keyDown(/** @type {KeyboardEvent} */ ev) {
             }
             return Emoji;
         };
+
+        function newGame() {
+            level = 0;
+            ship = newShip();
+            newLevel();
+        }
+
+        function newLevel() {
+            createEmojiAttackers();
+        }
+
         //ship creation after boom/death.
         function newShip() {
             
@@ -312,7 +314,7 @@ function update(){
          
 
         //draw shape(Change to Emoji)
-
+  
         // lv 1 object
         var img = document.getElementById("blazeit");
         // lv 2 object
@@ -371,6 +373,12 @@ function update(){
 
                     //emoji removel
                     Emoji.splice(i, 1);
+                    //levelUp
+                    if (Emoji.length == 0) {
+                        level++;
+                        newLevel();
+                        ctx.drawImage(img1, x - r  , y - r, EMOJI_SIZE, EMOJI_SIZE);
+                    }
                 }
                 // destroy the asteroid and activate the laser explosion
                destroyEmoji(i);
